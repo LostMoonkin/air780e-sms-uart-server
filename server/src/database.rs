@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use std::sync::{Arc, Mutex};
 
 #[derive(Debug, Clone)]
@@ -86,28 +86,6 @@ impl Database {
         }
 
         Ok(())
-    }
-
-    pub fn get_unacknowledged(&self) -> Result<Vec<SmsMessage>> {
-        let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT id, sender, content, received_at, metas FROM sms_messages WHERE acknowledged = 0"
-        ).context("Failed to prepare query for unacknowledged messages")?;
-
-        let messages = stmt
-            .query_map([], |row| {
-                Ok(SmsMessage {
-                    id: row.get(0)?,
-                    sender: row.get(1)?,
-                    content: row.get(2)?,
-                    received_at: row.get(3)?,
-                    metas: row.get(4)?,
-                })
-            })
-            .context("Failed to query unacknowledged messages")?;
-
-        let result: Result<Vec<_>, _> = messages.collect();
-        result.context("Failed to collect unacknowledged messages")
     }
 
     pub fn count_total(&self) -> Result<i64> {

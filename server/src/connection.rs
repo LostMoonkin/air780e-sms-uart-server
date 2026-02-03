@@ -264,8 +264,4 @@ impl SerialConnection {
 
         Ok(())
     }
-
-    pub fn get_state(&self) -> &ConnectionState {
-        &self.state
-    }
 }

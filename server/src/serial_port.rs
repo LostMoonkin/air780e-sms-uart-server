@@ -8,7 +8,6 @@ use tokio_serial::SerialPortBuilderExt;
 const TIMEOUT_MS: u64 = 1000;
 // The handshake command
 const INIT_CMD: &[u8] = b"CMD:GET_DEVICE_INFO\r\n";
-const DEFAULT_BAUD_RATE: u32 = 115_200;
 // Auto-detection retry settings
 const AUTO_DETECT_MAX_RETRIES: u32 = 10;
 const AUTO_DETECT_RETRY_DELAY_MS: u64 = 10000;
@@ -57,7 +56,7 @@ pub fn parse_message(line: &str) -> Option<ParsedMessage> {
     let base64_data = captures.get(3)?.as_str();
 
     // Decode base64
-    use base64::{engine::general_purpose, Engine as _};
+    use base64::{Engine as _, engine::general_purpose};
     let decoded = general_purpose::STANDARD.decode(base64_data).ok()?;
     let json_str = String::from_utf8(decoded).ok()?;
 
@@ -108,8 +107,8 @@ pub async fn auto_detect_port(baud_rate: u32) -> Option<String> {
         );
 
         let ports = tokio_serial::available_ports();
-        if ports.is_err() {
-            log::error!("Failed to list available ports, err={}", ports.unwrap_err());
+        if let Err(err) = ports {
+            log::error!("Failed to list available ports, err={}", err);
             if attempt < AUTO_DETECT_MAX_RETRIES {
                 log::info!("Retrying in {}ms...", AUTO_DETECT_RETRY_DELAY_MS);
                 tokio::time::sleep(Duration::from_millis(AUTO_DETECT_RETRY_DELAY_MS)).await;
@@ -128,10 +127,10 @@ pub async fn auto_detect_port(baud_rate: u32) -> Option<String> {
 
         let mut results = Vec::new();
         while let Some(res) = check_tasks.join_next().await {
-            if let Ok(port) = res {
-                if port.is_some() {
-                    results.push(port.unwrap());
-                }
+            if let Ok(port) = res
+                && let Some(valid_port) = port
+            {
+                results.push(valid_port);
             }
         }
 

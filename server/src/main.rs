@@ -1,15 +1,15 @@
 use std::sync::Arc;
 
 mod config;
+mod connection;
 mod database;
 mod notification;
 mod serial_port;
-mod connection;
 
 use config::Config;
+use connection::SerialConnection;
 use database::Database;
 use notification::{BarkNotifier, Notifier};
-use connection::SerialConnection;
 
 #[tokio::main]
 async fn main() {
@@ -46,10 +46,14 @@ async fn main() {
     };
 
     // Print database stats
-    if let Ok(total) = db.count_total() {
-        if let Ok(unack) = db.count_unacknowledged() {
-            log::info!("Database stats - Total messages: {}, Unacknowledged: {}", total, unack);
-        }
+    if let Ok(total) = db.count_total()
+        && let Ok(unack) = db.count_unacknowledged()
+    {
+        log::info!(
+            "Database stats - Total messages: {}, Unacknowledged: {}",
+            total,
+            unack
+        );
     }
 
     // Initialize notifier
@@ -65,19 +69,21 @@ async fn main() {
     };
 
     // Create connection manager
-    let mut connection = SerialConnection::new(
-        config.serial.clone(),
-        db.clone(),
-        notifier,
-    );
+    let mut connection = SerialConnection::new(config.serial.clone(), db.clone(), notifier);
 
     log::info!("Starting serial connection loop...");
-    log::info!("Port: {}, Baud: {}", config.serial.port_name, config.serial.baud_rate);
+    log::info!(
+        "Port: {}, Baud: {}",
+        config.serial.port_name,
+        config.serial.baud_rate
+    );
 
     // Setup Ctrl+C handler
     let (tx, mut rx) = tokio::sync::mpsc::channel::<()>(1);
     tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
+        tokio::signal::ctrl_c()
+            .await
+            .expect("Failed to listen for Ctrl+C");
         log::info!("Received Ctrl+C signal, shutting down...");
         let _ = tx.send(()).await;
     });
