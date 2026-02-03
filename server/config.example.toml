@@ -1,0 +1,17 @@
+[serial]
+# Port name: use "auto" for automatic detection, or specify like "COM3" (Windows) or "/dev/ttyUSB0" (Linux)
+port_name = "auto"
+baud_rate = 115200
+timeout_ms = 1000
+max_retry_count = 30
+retry_delay_ms = 10000
+
+[database]
+path = "sms.db"
+
+[notification]
+# Bark notification settings (iOS push notification service)
+# Replace with your actual Bark server URL and device key
+bark_server_url = "https://api.day.app"
+bark_device_key = "your Bark device key"
+enabled = true

@@ -157,13 +157,13 @@ end
 
 -- ======================== SMS Callback ========================
 
-local function on_sms_received(num, txt, metas)
+local function on_sms_received(sender_number, txt, metas)
     if not config.SMS_FORWARD_ENABLED then
         log.info("sms_handler", "SMS forwarding disabled, ignoring message")
         return
     end
 
-    log.info("sms_handler", "SMS received from " .. (num or "unknown") .. " content: " .. (txt or ""))
+    log.info("sms_handler", "SMS received from " .. (sender_number or "unknown") .. " content: " .. (txt or ""))
 
     -- Generate UUID for this SMS
     local sms_id = util.uuid()
@@ -171,7 +171,7 @@ local function on_sms_received(num, txt, metas)
     -- Prepare payload
     local payload = {
         id = sms_id,
-        sender = num or "",
+        sender = sender_number or "",
         content = txt or "",
         received_at = os.time(),
         metas = metas
@@ -194,7 +194,7 @@ end
 -- ======================== Initialization ========================
 
 function sms_handler.init()
-    sms.debug(true)
+    -- sms.debug(true)
     sms.setNewSmsCb(on_sms_received)
     log.info("sms_handler", "SMS callback registered")
 
