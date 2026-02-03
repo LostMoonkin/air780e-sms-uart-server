@@ -370,7 +370,6 @@ On every push or tag creation, binaries are automatically built for:
 |----------|--------------|---------------|
 | Windows | x64 | `air780e-uart-server-windows-x64.exe` |
 | Linux | x64 | `air780e-uart-server-linux-x64` |
-| Linux | ARM64 | `air780e-uart-server-linux-arm64` |
 | macOS | Intel (x64) | `air780e-uart-server-macos-x64` |
 | macOS | Apple Silicon (ARM64) | `air780e-uart-server-macos-arm64` |
 
