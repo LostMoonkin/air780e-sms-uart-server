@@ -8,9 +8,8 @@ use tokio_serial::SerialPortBuilderExt;
 const TIMEOUT_MS: u64 = 1000;
 // The handshake command
 const INIT_CMD: &[u8] = b"CMD:GET_DEVICE_INFO\r\n";
-// Auto-detection retry settings
-const AUTO_DETECT_MAX_RETRIES: u32 = 10;
-const AUTO_DETECT_RETRY_DELAY_MS: u64 = 10000;
+// Auto-detection retry settings (infinite retries for background service)
+const AUTO_DETECT_RETRY_DELAY_MS: u64 = 30000; // 30 seconds between retries
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SmsPayload {
@@ -99,22 +98,17 @@ pub async fn send_ack<W: AsyncWriteExt + Unpin>(writer: &mut W, uuid: &str) -> s
 }
 
 pub async fn auto_detect_port(baud_rate: u32) -> Option<String> {
-    for attempt in 1..=AUTO_DETECT_MAX_RETRIES {
-        log::info!(
-            "Auto-detecting port (attempt {}/{})",
-            attempt,
-            AUTO_DETECT_MAX_RETRIES
-        );
+    let mut attempt = 0;
+    loop {
+        attempt += 1;
+        log::info!("Auto-detecting port (attempt {})", attempt);
 
         let ports = tokio_serial::available_ports();
         if let Err(err) = ports {
             log::error!("Failed to list available ports, err={}", err);
-            if attempt < AUTO_DETECT_MAX_RETRIES {
-                log::info!("Retrying in {}ms...", AUTO_DETECT_RETRY_DELAY_MS);
-                tokio::time::sleep(Duration::from_millis(AUTO_DETECT_RETRY_DELAY_MS)).await;
-                continue;
-            }
-            return None;
+            log::info!("Retrying in {}ms...", AUTO_DETECT_RETRY_DELAY_MS);
+            tokio::time::sleep(Duration::from_millis(AUTO_DETECT_RETRY_DELAY_MS)).await;
+            continue;
         }
 
         let ports = ports.unwrap();
@@ -146,21 +140,12 @@ pub async fn auto_detect_port(baud_rate: u32) -> Option<String> {
             return Some(results[0].clone());
         }
 
-        if attempt < AUTO_DETECT_MAX_RETRIES {
-            log::warn!(
-                "No valid device found, retrying in {}ms...",
-                AUTO_DETECT_RETRY_DELAY_MS
-            );
-            tokio::time::sleep(Duration::from_millis(AUTO_DETECT_RETRY_DELAY_MS)).await;
-        } else {
-            log::error!(
-                "Failed to auto-detect port after {} attempts",
-                AUTO_DETECT_MAX_RETRIES
-            );
-        }
+        log::warn!(
+            "No valid device found, retrying in {}ms...",
+            AUTO_DETECT_RETRY_DELAY_MS
+        );
+        tokio::time::sleep(Duration::from_millis(AUTO_DETECT_RETRY_DELAY_MS)).await;
     }
-
-    None
 }
 
 pub async fn check_port(port_name: &str, baud_rate: u32) -> Option<String> {

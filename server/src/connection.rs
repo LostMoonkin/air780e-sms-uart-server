@@ -61,7 +61,7 @@ impl SerialConnection {
             self.config.port_name.clone()
         };
 
-        // Validate port with retry
+        // Validate port with retry (limited to handle multiple serial devices)
         for attempt in 1..=self.config.max_retry_count {
             log::info!(
                 "Validating port {} (attempt {}/{})",
@@ -95,9 +95,11 @@ impl SerialConnection {
             }
         }
 
+        // Validation failed - if using auto-detect, this will trigger re-detection on next loop
         self.state = ConnectionState::Failed;
         anyhow::bail!(
-            "Failed to validate port after {} attempts",
+            "Failed to validate port '{}' after {} attempts. Will retry auto-detection.",
+            port_name,
             self.config.max_retry_count
         )
     }
